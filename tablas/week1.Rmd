@@ -1,0 +1,229 @@
+---
+title: "Covid 19"
+author: "Alberto"
+date: "2024-08-27"
+output: html_document
+---
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+if (!require(lubridate)) install.packages("lubridate")
+library(lubridate)
+```
+```{r}
+file.exists("C:/Users/Luis/Documents/GitHub/dashboard_taller/tablas/fallecidos_sinadef.csv")
+
+```
+
+
+
+```{r}
+
+# Cargar un archivo CSV en R
+datos <- read.csv("C:/Users/Luis/Documents/GitHub/tablas/fallecidos_sinadef.csv", header = TRUE, sep = "|", stringsAsFactors = FALSE)
+
+# Ver las primeras filas del conjunto de datos
+head(datos)
+```
+
+```{r}
+str (datos)
+```
+```{r}
+unique(datos$TIPO.SEGURO)
+```
+```{r}
+library(dplyr)
+```
+```{r}
+datos_acotados <- datos[, c("TIPO.SEGURO", "EDAD", "DEPARTAMENTO.DOMICILIO", "FECHA")]
+
+# Ver las primeras filas del conjunto de datos acotado
+head(datos_acotados)
+```
+```{r}
+# Convertir la columna FECHA a formato de fecha (si no está ya convertida)
+datos_acotados$FECHA <- as.Date(datos_acotados$FECHA, format = "%Y-%m-%d")
+
+# Filtrar los datos para quedarse solo con el año 2024
+datos_2024 <- datos_acotados %>%
+  filter(format(FECHA, "%Y") == "2024")
+
+# Ver las primeras filas del conjunto de datos filtrado
+head(datos_2024)
+cantidad_filas <- nrow(datos_2024)
+print(cantidad_filas) #este comando es para ver la cantidad de filas y hacer una limpieza
+
+```
+
+```{r}
+names(datos_2024) <- make.names(names(datos_2024), unique = TRUE)
+cantidad_filas <- nrow(datos_2024)
+print(cantidad_filas) #validamos la limpieza de las filas
+```
+```{r}
+# Asegurarte de que la columna FECHA está en formato de fecha
+datos_2024$FECHA <- as.Date(datos_2024$FECHA, format = "%Y-%m-%d")
+```
+
+
+```{r}
+# Crear una nueva columna que contenga el número de la semana
+datos_2024$SEMANA <- format(datos_2024$FECHA, "%U")
+```
+
+```{r}
+install.packages("lubridate")
+library(lubridate)
+datos_2024$SEMANA <- week(datos_2024$FECHA)
+datos_2024_ordenado <- datos_2024[order(datos_2024$SEMANA), ]
+head(datos_2024_ordenado)
+```
+
+VALIDAMOS QUE LA TRANSFORMACIÓN DE DATOS SEA CORRECTA Y QUE SE ESTÉ TOMANDO EN CONSIDERACIÓN TODA LA METADATA
+
+```{r}
+fecha_min <- min(datos_2024_ordenado$FECHA)
+fecha_max <- max(datos_2024_ordenado$FECHA)
+print(paste("Las fechas van desde", fecha_min, "hasta", fecha_max))
+
+semana_min <- min(as.numeric(datos_2024_ordenado$SEMANA))
+semana_max <- max(as.numeric(datos_2024_ordenado$SEMANA))
+print(paste("Las semanas van de la semana", semana_min, "a la semana", semana_max))
+```
+```{r}
+library(dplyr)
+
+# Asegúrate de que la columna EDAD es numérica
+datos_2024_ordenado$EDAD <- as.numeric(datos_2024_ordenado$EDAD)
+
+# Crear la nueva columna con las categorías
+datos_2024_ordenado <- datos_2024_ordenado %>%
+  mutate(CATEGORIA_EDAD = case_when(
+    EDAD >= 0 & EDAD <= 17  ~ "Niños y adolescentes (0-17 años)",
+    EDAD >= 18 & EDAD <= 39 ~ "Adultos jóvenes (18-39 años)",
+    EDAD >= 40 & EDAD <= 59 ~ "Adultos de mediana edad (40-59 años)",
+    EDAD >= 60              ~ "Personas mayores (60+ años)"
+  ))
+
+# Verifica las primeras filas para asegurarte de que la columna se ha creado correctamente
+head(datos_2024_ordenado)
+```
+
+```{r}
+datos_acotados_2024 <- datos_2024_ordenado[, c("DEPARTAMENTO.DOMICILIO", "SEMANA","CATEGORIA_EDAD")]
+
+# Ver las primeras filas del conjunto de datos acotado
+head(datos_acotados_2024)
+```
+```{r}
+# Filtrar solo la categoría "Personas mayores (60+ años)"
+tabla_mayores_por_departamento <- datos_2024_ordenado %>%
+  filter(CATEGORIA_EDAD == "Personas mayores (60+ años)") %>%
+  group_by(DEPARTAMENTO.DOMICILIO) %>%
+  summarise(Cantidad = n()) %>%
+  arrange(desc(Cantidad))
+
+# Ver la tabla resultante
+print(tabla_mayores_por_departamento)
+```
+```{r}
+# Filtrar solo la categoría "Personas mayores (60+ años)" y agregar la columna SEMANA
+tabla_mayores_por_departamento_semana <- datos_2024_ordenado %>%
+  filter(CATEGORIA_EDAD == "Personas mayores (60+ años)") %>%
+  group_by(DEPARTAMENTO.DOMICILIO, SEMANA) %>%
+  summarise(Cantidad = n()) %>%
+  arrange(DEPARTAMENTO.DOMICILIO, SEMANA, desc(Cantidad))
+
+# Ver la tabla resultante
+print(tabla_mayores_por_departamento_semana)
+```
+```{r}
+# Calcular la cantidad total de personas mayores por departamento (AMAZONAS, etc.)
+tabla_mayores_por_departamento_semana <- datos_2024_ordenado %>%
+  filter(CATEGORIA_EDAD == "Personas mayores (60+ años)") %>%
+  group_by(DEPARTAMENTO.DOMICILIO, SEMANA) %>%
+  summarise(Cantidad = n(), .groups = "drop") %>%
+  # Calcular la suma total por departamento
+  group_by(DEPARTAMENTO.DOMICILIO) %>%
+  mutate(Suma_total = sum(Cantidad)) %>%
+  # Crear una nueva columna con el porcentaje basado en la suma total del departamento
+  mutate(Porcentaje = (Cantidad / Suma_total) * 100) %>%
+  ungroup() %>% # Eliminar el grupo por DEPARTAMENTO.DOMICILIO
+  arrange(DEPARTAMENTO.DOMICILIO, SEMANA)
+
+# Ver la tabla resultante
+print(tabla_mayores_por_departamento_semana)
+
+```
+
+
+
+```{r}
+library(ggplot2)
+
+# Crear el mapa de calor
+mapa_calor_1 <- ggplot(tabla_mayores_por_departamento_semana, aes(x = SEMANA, y = DEPARTAMENTO.DOMICILIO, fill = Cantidad)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Mapa de Calor de muertes: Cantidad de Personas Mayores (60+ años) por Departamento y Semana",
+       x = "Semana",
+       y = "Departamento",
+       fill = "Cantidad") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mapa_calor_1
+```
+```{r}
+# Guardar el gráfico 'mapa_calor_obj' como archivo .rds
+saveRDS(mapa_calor_1, file = "mapa_calor_1.rds")
+```
+
+
+```{r}
+library(ggplot2)
+
+# Crear el mapa de calor usando el porcentaje
+ggplot(tabla_mayores_por_departamento_semana, aes(x = SEMANA, y = DEPARTAMENTO.DOMICILIO, fill = Porcentaje)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Mapa de Calor de muertes: Porcentaje de Personas Mayores (60+ años) por Departamento y Semana",
+       x = "Semana",
+       y = "Departamento",
+       fill = "Porcentaje") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Filtrar los registros para eliminar "SIN REGISTRO" de la columna DEPARTAMENTO.DOMICILIO
+tabla_mayores_por_departamento_semana_filtrada <- tabla_mayores_por_departamento_semana %>%
+  filter(DEPARTAMENTO.DOMICILIO != "SIN REGISTRO")
+
+# Crear el mapa de calor usando el porcentaje, después de filtrar "SIN REGISTRO"
+mapa_calor_2 <- ggplot(tabla_mayores_por_departamento_semana_filtrada, aes(x = SEMANA, y = DEPARTAMENTO.DOMICILIO, fill = Porcentaje)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Mapa de Calor de muertes: Porcentaje de Personas Mayores (60+ años) por Departamento y Semana",
+       x = "Semana",
+       y = "Departamento",
+       fill = "Porcentaje") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mapa_calor_2
+```
+```{r}
+class(mapa_calor_2)
+
+```
+```{r}
+# Guardar el gráfico 'mapa_calor_obj' como archivo .rds
+saveRDS(mapa_calor_2, file = "mapa_calor_2.rds")
+```
+
+
+
+

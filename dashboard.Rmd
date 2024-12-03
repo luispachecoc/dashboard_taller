@@ -1,0 +1,32 @@
+---
+title: "My Storyboard at DACSS - pages"
+bibliography: testVisual.bib
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+# Cargar librerías necesarias
+library(flexdashboard)  # Para el dashboard
+library(ggplot2)        # Para gráficos (si es necesario)
+library(readr)          # Para leer archivos RDS
+
+```
+Chapter 1
+=====================================
+
+
+```{r}
+# Cargar y visualizar el archivo RDS de la "Worst barplot"
+mapa_calor_1 <- readRDS("C:/Users/Luis/Documents/GitHub/dashboard_taller/tablas/mapa_calor_1.rds")
+print(mapa_calor_1)  # Para ver el contenido del RDS
+# Si el RDS contiene un gráfico, lo dibujamos
+if (inherits(mapa_calor_1, "gg")) {
+  print(mapa_calor_1)
+} else {
+  # Si es otro tipo de objeto, mostrarlo de otra manera
+  plot(mapa_calor_1)
+}
+
+```
+
