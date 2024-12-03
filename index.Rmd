@@ -1,5 +1,5 @@
 ---
-title: "My Storyboard at DACSS - tabs"
+title: "Taller de Herramientas Cuantitativas"
 bibliography: testVisual.bib
 output: 
   flexdashboard::flex_dashboard
@@ -50,11 +50,6 @@ readRDS("C:/Users/Luis/Documents/GitHub/dashboard_taller/week2_spatial/algeria2.
 readRDS("C:/Users/Luis/Documents/GitHub/dashboard_taller/week2_spatial/algeria3.rds")
 ```
 
-### Spatial Data (I) 4
-
-```{r}
-readRDS("C:/Users/Luis/Documents/GitHub/dashboard_taller/week2_spatial/algeria3.rds")
-```
 
 ### Spatial Data (I) 4
 
